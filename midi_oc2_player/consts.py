@@ -6,12 +6,26 @@ class Instrument(typing.NamedTuple):
     name: str
     octave: int
 
-    range: int = 2
+    octave_count: int = 2
+
+    @property
+    def range(self):
+        return [
+            F0 + (self.octave - self.octave_count // 2) * OCTAVE,
+            F0 + (self.octave + self.octave_count // 2) * OCTAVE
+        ]
+
+    @property
+    def range_start(self):
+        return self.range[0]
+
+    @property
+    def range_end(self):
+        return self.range[1]
 
 
 OCTAVE = 12
 F0 = 18
-
 
 INSTRUMENTS = [
     Instrument(id=0, name='block.note_block.bass', octave=2),

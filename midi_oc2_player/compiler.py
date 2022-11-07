@@ -6,7 +6,8 @@ from midi_oc2_player import consts
 
 
 FREQUENCY = 0.01
-PATH = 'midi/believe_me.mid'
+NOTE_LENGTH = 1
+PATH = 'midi/blumenkranz.mid'
 
 NOTES = collections.defaultdict(list)
 
@@ -32,6 +33,10 @@ def process_instrument(
         instrument_configs: list[InstrumentConfig],
         base: int
 ):
+    if instrument.is_drum:
+        print('drums currently are not implemented')
+        return
+
     notes = instrument.notes
 
     for note in notes:
@@ -43,13 +48,28 @@ def process_instrument(
                 minecraft_instrument = conf.instrument
                 break
 
+            if conf.instrument.range_start <= pitch <= conf.instrument.range_end:
+                minecraft_instrument = conf.instrument
+                break
+
         if minecraft_instrument is None:
-            raise ValueError(f'No instrument found to process pitch {pitch}')
+            print(f'No instrument found to process pitch {pitch}')
+            continue
 
         shift = consts.F0 + consts.OCTAVE * minecraft_instrument.octave
 
         tick = int(note.start // FREQUENCY)
-        NOTES[tick].append((minecraft_instrument.id, pitch2mine(pitch - shift), min(round(note.velocity / 127, 2), 1)))
+
+        while tick < int(note.end // FREQUENCY):
+            NOTES[tick].append(
+                (
+                    minecraft_instrument.id,
+                    pitch2mine(pitch - shift),
+                    min(round(note.velocity / 127, 2), 1),
+                    note.pitch,
+                )
+            )
+            tick += int(NOTE_LENGTH // FREQUENCY)
 
 
 def main(instrument_configs: list[InstrumentConfig], base: int):
@@ -67,32 +87,15 @@ def main(instrument_configs: list[InstrumentConfig], base: int):
             print(conf.instrument.id, conf.instrument.name, file=f)
 
         for tick, notes in sorted(NOTES.items()):
-            notes = [f'{n[0]}!{n[1]}!{n[2]}' for n in notes]
+            notes = [f'{n[0]}!{n[1]}!{n[2]}!{n[3] - consts.F0 - consts.OCTAVE}' for n in notes]
 
             print(f'{tick}|{",".join(notes)}', file=f)
 
 
 if __name__ == '__main__':
     main([
-        InstrumentConfig(
-            consts.get_instrument_by_name('block.note_block.bass'),
-            preferred_range=PreferredRange(
-                start=30,
-                end=54,
-            )
-        ),
-        InstrumentConfig(
-            consts.get_instrument_by_name('block.note_block.guitar'),
-            preferred_range=PreferredRange(
-                start=55,
-                end=consts.F0 + 4 * consts.OCTAVE,
-            )
-        ),
-        InstrumentConfig(
-            consts.get_instrument_by_name('block.note_block.flute'),
-            preferred_range=PreferredRange(
-                start=consts.F0 + 4 * consts.OCTAVE + 1,
-                end=consts.F0 + 6 * consts.OCTAVE,
-            )
-        )
-    ], base=-consts.OCTAVE)
+        InstrumentConfig(consts.get_instrument_by_name('block.note_block.bass')),
+        InstrumentConfig(consts.get_instrument_by_name('block.note_block.guitar')),
+        InstrumentConfig(consts.get_instrument_by_name('block.note_block.harp')),
+        InstrumentConfig(consts.get_instrument_by_name('block.note_block.bell')),
+    ], base=0)

@@ -1,6 +1,8 @@
 import devices
 import time
 
+OUTPUT = True
+
 
 def play_sound(device, *args):
     device.bus.flush()
@@ -17,14 +19,29 @@ def process_tick(s, data):
     sounds = []
     volumes = []
     pitches = []
+    original_pitches = []
 
     for note in notes:
-        sound_id, pitch, velocity = note.split('!')
+        sound_id, pitch, velocity, original_pitch = note.split('!')
         sound = MINECRAFT_INSTRUMENTS[int(sound_id)]
         if sound is not None:
             sounds.append(sound)
             volumes.append(float(velocity))
             pitches.append(float(pitch))
+
+            if OUTPUT:
+                original_pitches.append(int(original_pitch))
+
+    if OUTPUT:
+        original_pitches.sort()
+        iterator = 0
+        for i in range(70):
+            if iterator < len(original_pitches) and original_pitches[iterator] == i:
+                print('*', end='')
+                iterator += 1
+            else:
+                print(' ', end='')
+        print()
 
     play_sound(s, sounds, volumes, pitches)
 
@@ -43,7 +60,8 @@ def run(f):
         delay = time.time() - start_time
         to_sleep = (tick - current_tick) * FREQUENCY - delay
         if to_sleep < 0:
-            print('missed tick: {}'.format(tick))
+            if not OUTPUT:
+                print('missed tick: {}'.format(tick))
             to_sleep = 0
 
         time.sleep(to_sleep)
